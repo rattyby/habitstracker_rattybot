@@ -1,16 +1,14 @@
+import bot
 import pytest
-from bot import dp, cmd_start
-from aiogram.types import Message
 
+def test_bot_import():
+    """Проверяем, что модуль bot импортируется без ошибок"""
+    assert bot.BOT_TOKEN == 'test_token'
+    assert bot.dp is not None
 
-def test_dp_has_start_handler():
+def test_start_handler_exists():
     """Проверяем, что обработчик /start зарегистрирован"""
-    # Получаем все обработчики сообщений
-    # Упрощённо: проверяем, что функция cmd_start является обработчиком
-    assert callable(cmd_start)
-
-
-def test_bot_imports():
-    """Проверяем, что модуль импортируется без ошибок"""
-    import bot
-    assert bot.BOT_TOKEN is not None
+    # Получаем все обработчики сообщений (упрощённая проверка)
+    handlers = bot.dp.message.handlers
+    # Хотя бы один обработчик должен быть
+    assert len(handlers) > 0

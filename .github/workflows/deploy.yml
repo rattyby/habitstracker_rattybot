@@ -4,6 +4,9 @@ on:
   push:
     branches: [ main ]
 
+env:
+  FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: 'true'
+
 jobs:
   deploy:
     runs-on: ubuntu-latest
@@ -22,7 +25,10 @@ jobs:
           pip install -r requirements.txt
 
       - name: Run tests
+        env:
+          BOT_TOKEN: 'test_token'
         run: |
+          export PYTHONPATH=PYTHONPATH:.
           pytest tests/
 
       - name: Deploy to server
