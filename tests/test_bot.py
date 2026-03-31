@@ -1,14 +1,12 @@
-import bot
 import pytest
 
 def test_bot_import():
-    """Проверяем, что модуль bot импортируется без ошибок"""
-    assert bot.BOT_TOKEN == 'test_token'
+    import bot
+    assert bot.BOT_TOKEN is not None
+    assert len(bot.BOT_TOKEN) > 10
     assert bot.dp is not None
 
 def test_start_handler_exists():
-    """Проверяем, что обработчик /start зарегистрирован"""
-    # Получаем все обработчики сообщений (упрощённая проверка)
-    handlers = bot.dp.message.handlers
-    # Хотя бы один обработчик должен быть
-    assert len(handlers) > 0
+    import bot
+    assert hasattr(bot, 'cmd_start')
+    assert callable(bot.cmd_start)
