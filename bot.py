@@ -32,6 +32,9 @@ dp = Dispatcher()
 @dp.message(Command('start'))
 async def cmd_start(message: types.Message):
     """Ответ на команду /start"""
+    if message.from_user is None:
+        logger.warning('Message has no from_user')
+        return
     logger.info(f'User {message.from_user.id} started bot')
     await message.answer(
         'Привет! Я трекер привычек. Пока я только учусь, но скоро буду полезным.'
