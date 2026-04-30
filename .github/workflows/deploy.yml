@@ -40,4 +40,9 @@ jobs:
           script: |
             cd /opt/habitstracker_rattybot
             git pull
-            docker-compose up -d --build
+            docker-compose down --remove-orphans
+            docker-compose up -d --build db     # убедиться, что БД запущена (если ещё нет)
+            sleep 5                             # дать БД время подняться
+            docker-compose run --rm bot alembic upgrade head
+            docker-compose up -d --build bot
+            docker system prune -f              # опционально: очистить неиспользуемые образы
