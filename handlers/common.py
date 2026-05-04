@@ -20,6 +20,7 @@ async def cmd_start(message: types.Message):
         'Доступные команды:\n'
         '/add_habit – добавить новую привычку\n'
         '/my_habits – посмотреть мои привычки\n'
+        '/set_timezone – установить часовой пояс\n'
         '/help – помощь'
     )
 
@@ -34,5 +35,6 @@ async def cmd_help(message: types.Message):
     await message.answer(
         'Я помогаю внедрять полезные привычки.\n'
         'Чтобы добавить привычку – /add_habit\n'
-        'Покажу ваши привычки – /my_habits'
+        'Покажу ваши привычки – /my_habits\n'
+        'Установить часовой пояс – /set_timezone'
     )
