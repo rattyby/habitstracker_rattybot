@@ -24,12 +24,6 @@ async def cmd_start(message: types.Message):
     )
 
 
-@router.message(Command('add_habit'))
-async def cmd_add_habit(message: types.Message):
-    # Позже здесь будет FSM
-    await message.answer('Функция добавления привычки в разработке. Скоро появится!')
-
-
 @router.message(Command('my_habits'))
 async def cmd_my_habits(message: types.Message):
     await message.answer('Список ваших привычек пока пуст. Добавьте первую через /add_habit')

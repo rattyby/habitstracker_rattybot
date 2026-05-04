@@ -8,7 +8,7 @@ from environs import Env
 from sqlalchemy import text
 
 from db import engine
-from handlers.common import router as common_router
+from handlers import routers
 
 # Загрузка переменных окружения
 env = Env()
@@ -32,7 +32,7 @@ logging.getLogger('aiogram').setLevel(logging.WARNING)
 bot = Bot(token=BOT_TOKEN)
 dp = Dispatcher()
 # Регистрация роутов
-dp.include_router(common_router)
+dp.include_routers(*routers)
 
 
 async def on_startup():
