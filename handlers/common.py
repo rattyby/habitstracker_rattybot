@@ -25,11 +25,6 @@ async def cmd_start(message: types.Message):
     )
 
 
-@router.message(Command('my_habits'))
-async def cmd_my_habits(message: types.Message):
-    await message.answer('Список ваших привычек пока пуст. Добавьте первую через /add_habit')
-
-
 @router.message(Command('help'))
 async def cmd_help(message: types.Message):
     await message.answer(
