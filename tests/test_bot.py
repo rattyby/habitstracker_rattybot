@@ -6,7 +6,6 @@ def test_bot_import():
     assert len(bot.BOT_TOKEN) > 10
     assert bot.dp is not None
 
-def test_start_handler_exists():
-    import bot
-    assert hasattr(bot, 'cmd_start')
-    assert callable(bot.cmd_start)
+def test_router_import():
+    from handlers.common import router
+    assert router is not None
