@@ -1,7 +1,9 @@
 aiogram==3.26.0
 alembic==1.18.4
+apscheduler==3.11.2
 asyncpg==0.31.0
 environs==14.6.0
 psycopg2-binary==2.9.11
 pytest==9.0.2
+pytz==2026.2
 sqlalchemy==2.0.49

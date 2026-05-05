@@ -9,6 +9,7 @@ from sqlalchemy import text
 
 from db import engine
 from handlers import routers
+from scheduler import set_bot, init_scheduler
 
 # Загрузка переменных окружения
 env = Env()
@@ -28,8 +29,12 @@ logger = logging.getLogger(__name__)
 # Уменьшаем количество логов от готовых библиотек.
 logging.getLogger('aiogram').setLevel(logging.WARNING)
 
-# Инициализация бота и диспетчера
+# Инициализация бота.
 bot = Bot(token=BOT_TOKEN)
+# Передача объекта Bot в планировщик и запуск задач.
+set_bot(bot)
+init_scheduler()
+# Инициализация диспетчера.
 dp = Dispatcher()
 # Регистрация роутов
 dp.include_routers(*routers)
