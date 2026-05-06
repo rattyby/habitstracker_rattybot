@@ -2,8 +2,7 @@ import asyncio
 import logging
 import sys
 
-from aiogram import Bot, Dispatcher, types
-from aiogram.filters import Command
+from aiogram import Bot, Dispatcher
 from environs import Env
 from sqlalchemy import text
 
@@ -29,12 +28,8 @@ logger = logging.getLogger(__name__)
 # Уменьшаем количество логов от готовых библиотек.
 logging.getLogger('aiogram').setLevel(logging.WARNING)
 
-# Инициализация бота.
+# Инициализация бота и диспетчера.
 bot = Bot(token=BOT_TOKEN)
-# Передача объекта Bot в планировщик и запуск задач.
-set_bot(bot)
-init_scheduler()
-# Инициализация диспетчера.
 dp = Dispatcher()
 # Регистрация роутов
 dp.include_routers(*routers)
@@ -49,6 +44,11 @@ async def on_startup():
     except Exception as e:
         logger.error(f'Database connection failed: {e}')
         raise
+
+    # Передача объекта Bot в планировщик и запуск задач.
+    set_bot(bot)
+    init_scheduler()
+    logger.info('Scheduler initialized')
 
 
 async def main():
