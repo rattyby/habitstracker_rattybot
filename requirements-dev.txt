@@ -1,0 +1,6 @@
+-r requirements.txt
+aiosqlite==0.22.1   # для тестовой in-memory БД
+factory-boy==3.3.3
+pytest==9.0.2
+pytest-asyncio==1.3.0
+pytest-env==1.6.0
