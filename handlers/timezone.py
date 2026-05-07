@@ -5,7 +5,7 @@ from aiogram.filters import Command
 from aiogram.types import Message, InlineKeyboardMarkup, InlineKeyboardButton, CallbackQuery
 from sqlalchemy import select
 
-from db import async_session_maker
+from db import get_async_session_maker
 from models import User
 
 
@@ -47,7 +47,8 @@ async def process_timezone_callback(callback: CallbackQuery):
         return
     tz = callback.data[3:]  # убираем 'tz_'
     # Сохраняем в БД
-    async with async_session_maker() as session:
+    maker = get_async_session_maker()
+    async with maker() as session:
         result = await session.execute(
             select(User).where(User.telegram_id == callback.from_user.id)
         )

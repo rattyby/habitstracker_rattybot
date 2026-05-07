@@ -8,7 +8,7 @@ from aiogram.types import Message, ReplyKeyboardMarkup, KeyboardButton, ReplyKey
 from datetime import timedelta, date, time
 from sqlalchemy import select
 
-from db import async_session_maker
+from db import get_async_session_maker
 from models import User, Habit, HabitLog
 from services.premium import check_habits_limit
 
@@ -31,7 +31,8 @@ class AddHabitStates(StatesGroup):
 async def cmd_add_habit(message: Message, state: FSMContext):
     """Начинаем процесс добавления привычки"""
     # Проверяем лимит активных привычек
-    async with async_session_maker() as session:
+    maker = get_async_session_maker()
+    async with maker() as session:
         if not message.from_user is None:
             user_id = message.from_user.id
         else:
@@ -190,7 +191,8 @@ async def process_time(message: Message, state: FSMContext):
     end_date = data['end_date']
 
     # Сохраняем в БД
-    async with async_session_maker() as session:
+    maker = get_async_session_maker()
+    async with maker() as session:
         # Получаем пользователя по telegram_id (он уже должен быть создан при старте)
         if message.from_user is None:
             logger.warning('Message has no from_user')

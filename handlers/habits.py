@@ -6,7 +6,7 @@ from aiogram.types import Message
 from datetime import date
 from sqlalchemy import select
 
-from db import async_session_maker
+from db import get_async_session_maker
 from models import User, Habit
 
 
@@ -21,7 +21,8 @@ async def cmd_my_habits(message: Message):
         logger.warning('Message has no from_user')
         return
 
-    async with async_session_maker() as session:
+    maker = get_async_session_maker()
+    async with maker() as session:
         # Находим пользователя
         result = await session.execute(
             select(User).where(User.telegram_id == message.from_user.id)
