@@ -10,13 +10,6 @@ from models import Base
 TEST_DATABASE_URL = 'sqlite+aiosqlite:///:memory:'
 
 
-@pytest.fixture(scope='session')
-def event_loop():
-    loop = asyncio.new_event_loop()
-    yield loop
-    loop.close()
-
-
 @pytest.fixture(scope='function')
 async def session_maker():
     engine = create_async_engine(TEST_DATABASE_URL, echo=False, future=True)
