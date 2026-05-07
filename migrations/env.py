@@ -8,21 +8,24 @@ from sqlalchemy import engine_from_config, pool
 from alembic import context
 
 # Импортируем синхронный DATABASE_URL
-from db import DATABASE_URL_SYNC
+from db import get_sync_database_url
 from models import Base  # чтобы Alembic видел метаданные
 
+
 config = context.config
-config.set_main_option('sqlalchemy.url', DATABASE_URL_SYNC)
+config.set_main_option('sqlalchemy.url', get_sync_database_url())
 
 if config.config_file_name is not None:
     fileConfig(config.config_file_name)
 
 target_metadata = Base.metadata
 
+
 def run_migrations_offline():
-    context.configure(url=DATABASE_URL_SYNC, target_metadata=target_metadata, literal_binds=True)
+    context.configure(url=get_sync_database_url(), target_metadata=target_metadata, literal_binds=True)
     with context.begin_transaction():
         context.run_migrations()
+
 
 def run_migrations_online():
     connectable = engine_from_config(
@@ -34,6 +37,7 @@ def run_migrations_online():
         context.configure(connection=connection, target_metadata=target_metadata)
         with context.begin_transaction():
             context.run_migrations()
+
 
 if context.is_offline_mode():
     run_migrations_offline()

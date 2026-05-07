@@ -30,4 +30,4 @@ async def session_maker():
 @pytest.fixture(autouse=True)
 def patch_db_session_maker(monkeypatch, session_maker):
     from db import get_async_session_maker
-    monkeypatch.setattr("db.get_async_session_maker", lambda: session_maker)
+    monkeypatch.setattr('db.get_async_session_maker', lambda: session_maker)
