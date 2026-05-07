@@ -21,6 +21,7 @@ async def test_add_habit_limit_exceeded(session):
 
     message = AsyncMock(spec=Message)
     message.from_user = TgUser(id=555, is_bot=False, first_name='Test')
+    message.answer = AsyncMock()
     state = AsyncMock()
     await cmd_add_habit(message, state)
 

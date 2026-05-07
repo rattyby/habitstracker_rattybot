@@ -10,6 +10,7 @@ from handlers.timezone import cmd_set_timezone, process_timezone_callback
 @pytest.mark.asyncio
 async def test_cmd_set_timezone():
     message = AsyncMock(spec=Message)
+    message.answer = AsyncMock()
     await cmd_set_timezone(message)
     message.answer.assert_called_with(
         'Выберите ваш часовой пояс (по городу):',

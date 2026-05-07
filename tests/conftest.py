@@ -1,4 +1,3 @@
-import asyncio
 import pytest
 
 from sqlalchemy.ext.asyncio import create_async_engine, async_sessionmaker
@@ -18,6 +17,13 @@ async def session_maker():
     maker = async_sessionmaker(engine, expire_on_commit=False)
     yield maker
     await engine.dispose()
+
+
+@pytest.fixture(scope='function')
+async def session(session_maker):
+    async with session_maker() as sess:
+        yield sess
+        await sess.rollback()  # откатываем изменения после каждого теста
 
 
 @pytest.fixture(autouse=True)

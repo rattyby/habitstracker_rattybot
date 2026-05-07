@@ -42,3 +42,7 @@ def get_sync_database_url():
     DB_PASSWORD = env.str('DB_PASSWORD')
     DB_NAME = env.str('DB_NAME')
     return f'postgresql://{DB_USER}:{DB_PASSWORD}@{DB_HOST}:{DB_PORT}/{DB_NAME}'
+
+
+def get_engine():
+    return _get_engine()

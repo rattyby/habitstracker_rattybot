@@ -6,7 +6,7 @@ from aiogram import Bot, Dispatcher
 from environs import Env
 from sqlalchemy import text
 
-from db import engine
+from db import get_engine
 from handlers import routers
 from scheduler import set_bot, init_scheduler
 
@@ -38,6 +38,7 @@ dp.include_routers(*routers)
 async def on_startup():
     """Проверка подключения к БД при старте бота"""
     try:
+        engine = get_engine()
         async with engine.connect() as conn:
             await conn.execute(text('SELECT 1'))
         logger.info('Database connection successful')
