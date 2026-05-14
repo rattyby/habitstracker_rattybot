@@ -1,7 +1,7 @@
 import pytest
 
 from aiogram.types import Message, User as TgUser
-from unittest.mock import AsyncMock, patch
+from unittest.mock import AsyncMock
 
 from handlers.common import cmd_start, cmd_help
 

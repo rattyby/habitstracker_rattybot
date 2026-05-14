@@ -6,7 +6,7 @@ from apscheduler.triggers.cron import CronTrigger
 from datetime import datetime, timedelta, date, timezone
 from sqlalchemy import select
 
-from db import async_session_maker
+from db import get_async_session_maker
 from models import Habit, HabitLog, User
 
 
@@ -28,7 +28,8 @@ async def send_reminder(habit_id: int, log_id: int, user_tz: str):
         logger.error('Bot instance not set in scheduler')
         return
 
-    async with async_session_maker() as session:
+    maker = get_async_session_maker()
+    async with maker() as session:
         habit = await session.get(Habit, habit_id)
         if not habit or not habit.is_active:
             return
@@ -51,7 +52,8 @@ async def send_reminder(habit_id: int, log_id: int, user_tz: str):
 
 async def schedule_daily_reminders():
     """Загружает активные привычки и планирует задачи на сегодня и будущие дни"""
-    async with async_session_maker() as session:
+    maker = get_async_session_maker()
+    async with maker() as session:
         today = date.today()
         habits = await session.execute(
             select(Habit).where(

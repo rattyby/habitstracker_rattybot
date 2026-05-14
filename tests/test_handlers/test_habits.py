@@ -4,13 +4,13 @@ from aiogram.types import Message, User as TgUser
 from datetime import date, timedelta
 from unittest.mock import AsyncMock
 
-from factories import UserFactory, HabitFactory
+from models import User, Habit
 from handlers.habits import cmd_my_habits
 
 
 @pytest.mark.asyncio
 async def test_my_habits_no_habits(session):
-    user = UserFactory(telegram_id=777)
+    user = User(telegram_id=777)
     session.add(user)
     await session.commit()
 
@@ -23,12 +23,12 @@ async def test_my_habits_no_habits(session):
 
 @pytest.mark.asyncio
 async def test_my_habits_with_habits(session):
-    user = UserFactory(telegram_id=888)
+    user = User(telegram_id=888)
     session.add(user)
     await session.commit()
 
-    habit1 = HabitFactory(user_id=user.id, name='Зарядка', end_date=date.today() + timedelta(days=10))
-    habit2 = HabitFactory(user_id=user.id, name='Чтение', is_active=False)
+    habit1 = Habit(user_id=user.id, name='Зарядка', start_date=date.today(), end_date=date.today() + timedelta(days=10), reminder_time=date.today(), is_active=True)
+    habit2 = Habit(user_id=user.id, name='Чтение', start_date=date.today(), end_date=date.today(), reminder_time=date.today(), is_active=False)
     session.add_all([habit1, habit2])
     await session.commit()
 

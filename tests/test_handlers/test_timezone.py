@@ -1,9 +1,9 @@
 import pytest
 
 from aiogram.types import Message, CallbackQuery, User as TgUser
-from unittest.mock import AsyncMock, patch
+from unittest.mock import AsyncMock
 
-from factories import UserFactory
+from models import User
 from handlers.timezone import cmd_set_timezone, process_timezone_callback
 
 
@@ -14,13 +14,13 @@ async def test_cmd_set_timezone():
     await cmd_set_timezone(message)
     message.answer.assert_called_with(
         'Выберите ваш часовой пояс (по городу):',
-        reply_markup=...  # лучше проверить, что клавиатура содержит нужные кнопки
+        reply_markup=pytest.approx({'inline_keyboard': [[{'text': 'UTC', 'callback_data': 'tz_UTC'}]]})
     )
 
 
 @pytest.mark.asyncio
 async def test_process_timezone_callback_existing_user(session):
-    user = UserFactory(telegram_id=666, timezone='UTC')
+    user = User(telegram_id=666, timezone='UTC')
     session.add(user)
     await session.commit()
 
@@ -28,6 +28,8 @@ async def test_process_timezone_callback_existing_user(session):
     callback.data = 'tz_Europe/Minsk'
     callback.from_user = TgUser(id=666, is_bot=False, first_name='Test')
     callback.message = AsyncMock()
+    callback.message.edit_text = AsyncMock()
+    callback.answer = AsyncMock()
 
     await process_timezone_callback(callback)
 
