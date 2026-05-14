@@ -1,9 +1,14 @@
+import os
 import pytest
 
+from dotenv import load_dotenv
 from sqlalchemy.ext.asyncio import create_async_engine, async_sessionmaker
 
 from models import Base
 
+
+# Загружаем тестовые переменные окружения
+load_dotenv('.env.test')
 
 # Используем in-memory SQLite для тестов
 TEST_DATABASE_URL = 'sqlite+aiosqlite:///:memory:'

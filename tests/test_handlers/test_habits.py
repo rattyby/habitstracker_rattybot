@@ -1,7 +1,7 @@
 import pytest
 
 from aiogram.types import Message, User as TgUser
-from datetime import date, timedelta
+from datetime import date, timedelta, time
 from unittest.mock import AsyncMock
 
 from models import User, Habit
@@ -27,8 +27,8 @@ async def test_my_habits_with_habits(session):
     session.add(user)
     await session.commit()
 
-    habit1 = Habit(user_id=user.id, name='Зарядка', start_date=date.today(), end_date=date.today() + timedelta(days=10), reminder_time=date.today(), is_active=True)
-    habit2 = Habit(user_id=user.id, name='Чтение', start_date=date.today(), end_date=date.today(), reminder_time=date.today(), is_active=False)
+    habit1 = Habit(user_id=user.id, name='Зарядка', start_date=date.today(), end_date=date.today() + timedelta(days=10), reminder_time=time(9, 0), is_active=True)
+    habit2 = Habit(user_id=user.id, name='Чтение', start_date=date.today(), end_date=date.today(), reminder_time=time(9, 0), is_active=False)
     session.add_all([habit1, habit2])
     await session.commit()
 

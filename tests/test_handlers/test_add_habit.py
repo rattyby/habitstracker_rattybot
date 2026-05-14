@@ -1,7 +1,7 @@
 import pytest
 
 from aiogram.types import Message, User as TgUser
-from datetime import date, timedelta
+from datetime import date, timedelta, time
 from unittest.mock import AsyncMock
 
 from models import User, Habit
@@ -15,7 +15,7 @@ async def test_add_habit_limit_exceeded(session):
     await session.commit()
     # Добавляем две активные привычки
     for _ in range(2):
-        h = Habit(user_id=user.id, name='Test', start_date=date.today(), end_date=date.today() + timedelta(days=1), reminder_time=date.today())
+        h = Habit(user_id=user.id, name='Test', start_date=date.today(), end_date=date.today() + timedelta(days=1), reminder_time=time(9, 0))
         session.add(h)
     await session.commit()
 
