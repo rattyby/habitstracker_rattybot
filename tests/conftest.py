@@ -1,37 +1,24 @@
-import os
 import pytest
 
 from dotenv import load_dotenv
 from sqlalchemy.ext.asyncio import create_async_engine, async_sessionmaker
 
-from models import Base
-
 
 # Загружаем тестовые переменные окружения
 load_dotenv('.env.test')
 
-# Используем in-memory SQLite для тестов
-TEST_DATABASE_URL = 'sqlite+aiosqlite:///:memory:'
-
 
 @pytest.fixture(scope='function')
-async def session_maker():
-    engine = create_async_engine(TEST_DATABASE_URL, echo=False, future=True)
+async def session():
+    from db import get_engine, get_async_session_maker
+    from models import Base
+
+    engine = get_engine()
     async with engine.begin() as conn:
         await conn.run_sync(Base.metadata.create_all)
-    maker = async_sessionmaker(engine, expire_on_commit=False)
-    yield maker
-    await engine.dispose()
 
-
-@pytest.fixture(scope='function')
-async def session(session_maker):
-    async with session_maker() as sess:
+    maker = get_async_session_maker()
+    async with maker() as sess:
         yield sess
-        await sess.rollback()  # откатываем изменения после каждого теста
-
-
-@pytest.fixture(autouse=True)
-def patch_db_session_maker(monkeypatch, session_maker):
-    from db import get_async_session_maker
-    monkeypatch.setattr('db.get_async_session_maker', lambda: session_maker)
+        await sess.rollback()
+        await sess.close()
