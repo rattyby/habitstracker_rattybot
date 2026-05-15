@@ -7,6 +7,7 @@ from datetime import date
 from sqlalchemy import select
 
 from db import get_async_session_maker
+from messages import NO_HABITS_MESSAGE, USER_NOT_REGISTERED
 from models import User, Habit
 
 
@@ -29,7 +30,7 @@ async def cmd_my_habits(message: Message):
         )
         user = result.scalar_one_or_none()
         if not user:
-            await message.answer('Вы не зарегистрированы. Напишите /start, чтобы начать.')
+            await message.answer(USER_NOT_REGISTERED)
             return
 
         # Получаем привычки пользователя, сортируем: сначала активные, потом завершённые
@@ -39,7 +40,7 @@ async def cmd_my_habits(message: Message):
         habits = habits.scalars().all()
 
         if not habits:
-            await message.answer('У вас пока нет привычек. Добавьте первую через /add_habit.')
+            await message.answer(NO_HABITS_MESSAGE)
             return
 
         # Формируем сообщение

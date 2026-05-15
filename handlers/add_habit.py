@@ -9,6 +9,7 @@ from datetime import timedelta, date, time
 from sqlalchemy import select
 
 from db import get_async_session_maker
+from messages import ASK_DURATION, ASK_END_DATE, ASK_NAME, ASK_PERIOD_TYPE, ASK_START_DATE, HABIT_ADDED_SUCCESS, HABIT_LIMIT_REACHED
 from models import User, Habit, HabitLog
 from services.premium import check_habits_limit
 
@@ -48,11 +49,11 @@ async def cmd_add_habit(message: Message, state: FSMContext):
             await session.commit()
 
         if not await check_habits_limit(user.id, session):
-            await message.answer('У вас достигнут лимит активных привычек (2 для бесплатного тарифа). Чтобы добавить новую, приобретите премиум.')
+            await message.answer(HABIT_LIMIT_REACHED)
             return
 
     await state.set_state(AddHabitStates.waiting_for_name)
-    await message.answer('Введите название привычки (например, "Утренняя зарядка"):')
+    await message.answer(ASK_NAME)
 
 
 @router.message(StateFilter(AddHabitStates.waiting_for_name))
@@ -79,10 +80,7 @@ async def process_name(message: Message, state: FSMContext):
         one_time_keyboard=True
     )
     await state.set_state(AddHabitStates.waiting_for_period_type)
-    await message.answer(
-        'Как вы хотите задать период привычки?',
-        reply_markup=kb
-    )
+    await message.answer(ASK_PERIOD_TYPE, reply_markup=kb)
 
 
 @router.message(StateFilter(AddHabitStates.waiting_for_period_type))
@@ -91,16 +89,10 @@ async def process_period_type(message: Message, state: FSMContext):
     choice = message.text
     if choice == 'На определённое количество дней':
         await state.set_state(AddHabitStates.waiting_for_duration)
-        await message.answer(
-            'Введите количество дней (от 1 до 365):',
-            reply_markup=ReplyKeyboardRemove()
-        )
+        await message.answer(ASK_DURATION, reply_markup=ReplyKeyboardRemove())
     elif choice == 'Выбрать даты начала и окончания':
         await state.set_state(AddHabitStates.waiting_for_start_date)
-        await message.answer(
-            'Введите дату начала в формате ГГГГ-ММ-ДД (например, 2025-12-31):',
-            reply_markup=ReplyKeyboardRemove()
-        )
+        await message.answer(ASK_START_DATE, reply_markup=ReplyKeyboardRemove())
     else:
         await message.answer('Пожалуйста, выберите вариант из предложенных.')
 
@@ -115,7 +107,7 @@ async def process_duration(message: Message, state: FSMContext):
         if duration < 1 or duration > 365:
             raise ValueError
     except ValueError:
-        await message.answer('Пожалуйста, введите целое число от 1 до 365.')
+        await message.answer(ASK_DURATION)
         return
 
     start_date = date.today()
@@ -142,7 +134,7 @@ async def process_start_date(message: Message, state: FSMContext):
         return
     await state.update_data(start_date=start_date)
     await state.set_state(AddHabitStates.waiting_for_end_date)
-    await message.answer('Введите дату окончания в формате ГГГГ-ММ-ДД:')
+    await message.answer(ASK_END_DATE)
 
 
 @router.message(StateFilter(AddHabitStates.waiting_for_end_date))
@@ -225,8 +217,7 @@ async def process_time(message: Message, state: FSMContext):
         await session.commit()
 
     await state.clear()
-    await message.answer(
-        f'Привычка "{name}" успешно добавлена!\n'
-        f'Напоминания будут приходить каждый день в {reminder_time.isoformat()} (по вашему часовому поясу).\n'
-        f'Период: с {start_date.isoformat()} по {end_date.isoformat()}.'
-    )
+    await message.answer(HABIT_ADDED_SUCCESS.format(name=name,
+                                                    reminder_time=reminder_time.isoformat(),
+                                                    start_date=start_date.isoformat(),
+                                                    end_date=end_date.isoformat()))

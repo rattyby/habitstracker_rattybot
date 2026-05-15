@@ -6,6 +6,7 @@ from aiogram.types import Message, InlineKeyboardMarkup, InlineKeyboardButton, C
 from sqlalchemy import select
 
 from db import get_async_session_maker
+from messages import TIMEZONE_PROMPT, USER_NOT_REGISTERED
 from models import User
 
 
@@ -34,10 +35,7 @@ async def cmd_set_timezone(message: Message):
             for tz in COMMON_TIMEZONES
         ]
     )
-    await message.answer(
-        'Выберите ваш часовой пояс (по городу):',
-        reply_markup=kb
-    )
+    await message.answer(TIMEZONE_PROMPT, reply_markup=kb)
 
 
 @router.callback_query(F.data.startswith('tz_'))
@@ -62,7 +60,7 @@ async def process_timezone_callback(callback: CallbackQuery):
                 logger.error('Callback message is not a Message for user {}'.format(callback.from_user.id))
         else:
             if isinstance(callback.message, Message):
-                await callback.message.edit_text('Сначала используйте /start, чтобы зарегистрироваться.')
+                await callback.message.edit_text(USER_NOT_REGISTERED)
             else:
                 logger.error('Callback message is not a Message for user {}'.format(callback.from_user.id))
     await callback.answer()

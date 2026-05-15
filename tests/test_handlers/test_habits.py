@@ -4,6 +4,7 @@ from aiogram.types import Message, User as TgUser
 from datetime import date, timedelta, time
 from unittest.mock import AsyncMock
 
+from messages import NO_HABITS_MESSAGE
 from models import User, Habit
 from handlers.habits import cmd_my_habits
 
@@ -18,7 +19,7 @@ async def test_my_habits_no_habits(session):
     message.from_user = TgUser(id=777, is_bot=False, first_name='Test')
     message.answer = AsyncMock()
     await cmd_my_habits(message)
-    message.answer.assert_called_with('У вас пока нет привычек. Добавьте первую через /add_habit.')
+    message.answer.assert_called_with(NO_HABITS_MESSAGE)
 
 
 @pytest.mark.asyncio

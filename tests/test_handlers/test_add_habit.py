@@ -4,6 +4,7 @@ from aiogram.types import Message, User as TgUser
 from datetime import date, timedelta, time
 from unittest.mock import AsyncMock
 
+from messages import HABIT_LIMIT_REACHED
 from models import User, Habit
 from handlers.add_habit import cmd_add_habit
 
@@ -25,5 +26,5 @@ async def test_add_habit_limit_exceeded(session):
     state = AsyncMock()
     await cmd_add_habit(message, state)
 
-    message.answer.assert_called_with('У вас достигнут лимит активных привычек (2 для бесплатного тарифа). Чтобы добавить новую, приобретите премиум.')
+    message.answer.assert_called_with(HABIT_LIMIT_REACHED)
     state.set_state.assert_not_called()

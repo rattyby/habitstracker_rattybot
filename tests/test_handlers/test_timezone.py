@@ -3,6 +3,7 @@ import pytest
 from aiogram.types import Message, CallbackQuery, User as TgUser
 from unittest.mock import AsyncMock, ANY
 
+from messages import TIMEZONE_PROMPT, TIMEZONE_SET_SUCCESS
 from models import User
 from handlers.timezone import cmd_set_timezone, process_timezone_callback
 
@@ -12,9 +13,7 @@ async def test_cmd_set_timezone():
     message = AsyncMock(spec=Message)
     message.answer = AsyncMock()
     await cmd_set_timezone(message)
-    message.answer.assert_called_with(
-        'Выберите ваш часовой пояс (по городу):',
-        reply_markup=ANY
+    message.answer.assert_called_with(TIMEZONE_PROMPT, reply_markup=ANY
     )
 
 
@@ -44,5 +43,5 @@ async def test_process_timezone_callback_existing_user(session):
         new_user = result.scalar_one()
         assert new_user.timezone == 'Europe/Minsk'
 
-    callback.message.edit_text.assert_called_with('Часовой пояс установлен: Europe/Minsk')
+    callback.message.edit_text.assert_called_with(TIMEZONE_SET_SUCCESS.format(new_user.timezone))
     callback.answer.assert_called_once()
