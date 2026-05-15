@@ -1,6 +1,7 @@
 import logging
 import pytz
 
+from aiogram.types import InlineKeyboardMarkup, InlineKeyboardButton
 from apscheduler.schedulers.asyncio import AsyncIOScheduler
 from apscheduler.triggers.cron import CronTrigger
 from datetime import datetime, timedelta, date, timezone
@@ -40,10 +41,15 @@ async def send_reminder(habit_id: int, log_id: int, user_tz: str):
         if not log or log.status != 'pending':
             return
 
+        kb = InlineKeyboardMarkup(inline_keyboard=[
+            [InlineKeyboardButton(text='✅ Выполнено', callback_data=f'complete_{habit.id}_{log.id}')]
+        ])
+
         await _bot.send_message(
             user.telegram_id,
             f'🔔 Напоминание: привычка "{habit.name}"\n'
-            f'Вы сегодня уже выполнили?'
+            f'Вы сегодня уже выполнили?',
+            reply_markup=kb
         )
         log.reminder_sent = True
         log.reminded_at = datetime.now(timezone.utc)
