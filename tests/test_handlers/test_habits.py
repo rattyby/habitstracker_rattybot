@@ -38,8 +38,10 @@ async def test_my_habits_with_habits(session):
     message.answer = AsyncMock()
     await cmd_my_habits(message)
 
-    # Проверяем, что в ответе есть названия
+    # Вместо жёсткой проверки всей клавиатуры, проверяем, что reply_markup передан:
     args, _ = message.answer.call_args
+    assert message.answer.call_args[1]['reply_markup'] is not None
+    # Проверяем, что в ответе есть названия
     response_text = args[0]
     assert 'Зарядка' in response_text
     assert 'Чтение' in response_text
