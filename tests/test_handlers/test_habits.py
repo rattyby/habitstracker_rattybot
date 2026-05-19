@@ -19,7 +19,9 @@ async def test_my_habits_no_habits(session):
     message.from_user = TgUser(id=777, is_bot=False, first_name='Test')
     message.answer = AsyncMock()
     await cmd_my_habits(message)
-    message.answer.assert_called_with(NO_HABITS_MESSAGE)
+
+    args, _ = message.answer.call_args
+    assert args[0] == NO_HABITS_MESSAGE
 
 
 @pytest.mark.asyncio

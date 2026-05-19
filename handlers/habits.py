@@ -15,35 +15,28 @@ logger = logging.getLogger(__name__)
 router = Router()
 
 
-@router.message(Command('my_habits'))
-async def cmd_my_habits(message: Message):
-    """Показывает список привычек пользователя"""
-    if message.from_user is None:
-        logger.warning(f'Message {message} has no from_user')
-        return
-
+async def get_habits_display(telegram_id: int) -> tuple[str, InlineKeyboardMarkup | None]:
+    """
+    Возвращает (текст, клавиатуру) для списка привычек пользователя.
+    """
     maker = get_async_session_maker()
     async with maker() as session:
-        # Находим пользователя
         result = await session.execute(
-            select(User).where(User.telegram_id == message.from_user.id)
+            select(User).where(User.telegram_id == telegram_id)
         )
         user = result.scalar_one_or_none()
         if not user:
-            await message.answer(USER_NOT_REGISTERED)
-            return
+            return USER_NOT_REGISTERED, None
 
-        # Получаем привычки пользователя, сортируем: сначала активные, потом завершённые
         habits = await session.execute(
-            select(Habit).where(Habit.user_id == user.id).order_by(Habit.is_active.desc(), Habit.end_date.desc())
+            select(Habit).where(Habit.user_id == user.id)
+            .order_by(Habit.is_active.desc(), Habit.end_date.desc())
         )
         habits = habits.scalars().all()
 
         if not habits:
-            await message.answer(NO_HABITS_MESSAGE)
-            return
+            return NO_HABITS_MESSAGE, None
 
-        # Формируем сообщение
         today = date.today()
         active_habits = [h for h in habits if h.is_active and h.end_date >= today]
         completed_habits = [h for h in habits if not h.is_active or h.end_date < today]
@@ -57,10 +50,9 @@ async def cmd_my_habits(message: Message):
                 lines.append(f'• {h.name} | {reminder} | {period}')
         if completed_habits:
             lines.append('\n🔴 *Завершённые:*')
-            for h in completed_habits[:5]:  # последние 5
+            for h in completed_habits[:5]:
                 lines.append(f'• {h.name} (до {h.end_date})')
 
-        # Клавиатура для активных привычек
         if active_habits:
             kb = InlineKeyboardMarkup(inline_keyboard=[
                 [InlineKeyboardButton(text=f'❌ Завершить {h.name}', callback_data=f'complete_habit_{h.id}')]
@@ -69,7 +61,18 @@ async def cmd_my_habits(message: Message):
         else:
             kb = None
 
-        await message.answer('\n'.join(lines), reply_markup=kb, parse_mode='Markdown')
+        return '\n'.join(lines), kb
+
+
+@router.message(Command('my_habits'))
+async def cmd_my_habits(message: Message):
+    """Показывает список привычек пользователя"""
+    if message.from_user is None:
+        logger.warning(f'Message {message} has no from_user')
+        return
+
+    text, kb = await get_habits_display(message.from_user.id)
+    await message.answer(text, reply_markup=kb, parse_mode='Markdown')
 
 
 @router.callback_query(F.data.startswith('complete_habit_'))
@@ -77,6 +80,7 @@ async def complete_habit_early(callback: CallbackQuery):
     if callback.data is None or callback.from_user is None or callback.message is None:
         logger.warning(f'Callback {callback} has no data of from_user')
         return
+
     habit_id = int(callback.data.split('_')[2])
     maker = get_async_session_maker()
     async with maker() as session:
@@ -86,11 +90,23 @@ async def complete_habit_early(callback: CallbackQuery):
             return
         if not habit.is_active:
             await callback.answer(HABIT_ALREADY_COMPLETED, show_alert=True)
+            try:
+                if not isinstance(callback.message, InaccessibleMessage):
+                    await callback.message.edit_reply_markup(reply_markup=None)
+            except Exception:
+                pass
             return
+
         habit.is_active = False
         await session.commit()
+
+    # Получаем обновлённый список привычек
+    text, kb = await get_habits_display(callback.from_user.id)
+    try:
         if not isinstance(callback.message, InaccessibleMessage):
-            await callback.message.edit_text(HABIT_COMPLETED.format(habit.name), show_alert=True)
-        else:
-            await callback.answer(HABIT_COMPLETED.format(habit.name), show_alert=True)
-    await callback.answer()
+            await callback.message.edit_text(text, reply_markup=kb, parse_mode='Markdown')
+            await callback.answer(HABIT_COMPLETED.format(habit.name))
+    except Exception as e:
+        # Если редактирование не удалось (старое сообщение, удалено и т.п.)
+        logger.warning(f'Failed to edit message: {e}')
+        await callback.answer(HABIT_COMPLETED.format(habit.name), show_alert=False)
