@@ -23,36 +23,92 @@ def set_bot(bot_instance):
     _bot = bot_instance
 
 
-async def send_reminder(habit_id: int, log_id: int, user_tz: str):
-    """Отправляет напоминание пользователю"""
+async def _send_reminder_message(habit, user, log, is_second=False):
+    """Отправляет сообщение-напоминание (первое или повторное)"""
     if _bot is None:
         logger.error('Bot instance not set in scheduler')
-        return
+        return False
 
+    if not habit or not habit.is_active:
+        return False
+    if not user:
+        return False
+    if not log or log.status != 'pending':
+        return False
+    if is_second and log.second_reminder_sent:
+        return False
+
+    text = (
+        '🔔 Напоминаю ещё раз' if is_second else '🔔 Напоминание' +
+        f': привычка "{habit.name}"\nВы сегодня уже выполнили?'
+    )
+
+    kb = InlineKeyboardMarkup(inline_keyboard=[
+        [InlineKeyboardButton(text='✅ Выполнено', callback_data=f'complete_{habit.id}_{log.id}')]
+    ])
+
+    await _bot.send_message(
+        user.telegram_id,
+        text,
+        reply_markup=kb
+    )
+
+    if is_second:
+        log.second_reminder_sent = True
+    else:
+        log.reminder_sent = True
+        log.reminded_at = datetime.now(timezone.utc)
+
+    return True
+
+
+async def send_reminder(habit_id: int, log_id: int):
+    """Отправляет напоминание пользователю"""
     maker = get_async_session_maker()
     async with maker() as session:
         habit = await session.get(Habit, habit_id)
-        if not habit or not habit.is_active:
-            return
-        user = await session.get(User, habit.user_id)
-        if not user:
-            return
+        if habit:
+            user = await session.get(User, habit.user_id)
         log = await session.get(HabitLog, log_id)
-        if not log or log.status != 'pending':
+
+        if not await _send_reminder_message(habit, user, log):
+            logger.warning(f'Failed to send reminder for habit {habit_id}')
             return
 
-        kb = InlineKeyboardMarkup(inline_keyboard=[
-            [InlineKeyboardButton(text='✅ Выполнено', callback_data=f'complete_{habit.id}_{log.id}')]
-        ])
+        logger.debug(f'Sent reminder for habit {habit_id}')
 
-        await _bot.send_message(
-            user.telegram_id,
-            f'🔔 Напоминание: привычка "{habit.name}"\n'
-            f'Вы сегодня уже выполнили?',
-            reply_markup=kb
+        # Планируем повторное напоминание
+        if not (habit and log):
+            logger.warning(f'Failed to schedule second reminder for habit {habit_id}')
+            return
+        scheduler.add_job(
+            send_second_reminder,
+            trigger='date',
+            run_date=datetime.now(timezone.utc) + timedelta(minutes=30),
+            args=[habit.id, log.id],
+            id=f'second_habit_{habit.id}_date_{log.date.isoformat()}'
         )
-        log.reminder_sent = True
-        log.reminded_at = datetime.now(timezone.utc)
+        logger.debug(f'Scheduled second reminder for habit {habit.id} in 30 minutes')
+
+        await session.commit()
+
+
+# Добавить новую функцию
+async def send_second_reminder(habit_id: int, log_id: int):
+    """Отправляет повторное напоминание через 30 минут"""
+    maker = get_async_session_maker()
+    async with maker() as session:
+        habit = await session.get(Habit, habit_id)
+        if habit:
+            user = await session.get(User, habit.user_id)
+        log = await session.get(HabitLog, log_id)
+        if not log:
+            logger.warning(f'Failed to send second reminder for habit {habit_id}')
+            return
+        if log.status != 'pending' or log.second_reminder_sent:
+            return
+
+        await _send_reminder_message(habit, user, log, is_second=True)
         await session.commit()
 
 
