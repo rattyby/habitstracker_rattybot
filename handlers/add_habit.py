@@ -11,6 +11,7 @@ from sqlalchemy import select
 from db import get_async_session_maker
 from messages import ASK_DURATION, ASK_END_DATE, ASK_NAME, ASK_PERIOD_TYPE, ASK_START_DATE, HABIT_ADDED_SUCCESS, HABIT_LIMIT_REACHED
 from models import User, Habit, HabitLog
+from services.manage_user import get_or_create_user
 from services.premium import check_habits_limit
 
 
@@ -38,16 +39,10 @@ async def cmd_add_habit(message: Message, state: FSMContext):
             user_id = message.from_user.id
         else:
             user_id = message.chat.id
-        # Находим или создаём пользователя в БД по telegram_id
-        result = await session.execute(
-            select(User).where(User.telegram_id == user_id)
-        )
-        user = result.scalar_one_or_none()
+        user = await get_or_create_user(session, user_id)
         if not user:
-            user = User(telegram_id=user_id)
-            session.add(user)
-            await session.commit()
-
+            logger.error(f'User {user_id} not created')
+            return
         if not await check_habits_limit(user.id, session):
             await message.answer(HABIT_LIMIT_REACHED)
             return
