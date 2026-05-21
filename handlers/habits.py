@@ -1,3 +1,4 @@
+import html
 import logging
 
 from aiogram import Router, F
@@ -43,19 +44,21 @@ async def get_habits_display(telegram_id: int) -> tuple[str, InlineKeyboardMarku
 
         lines = ['📋 Ваши привычки:\n']
         if active_habits:
-            lines.append('✅ *Активные:*')
+            lines.append('<b>✅ Активные:</b>')
             for h in active_habits:
+                escaped_name = html.escape(h.name)
                 period = f'{h.start_date} – {h.end_date}'
                 reminder = h.reminder_time.strftime('%H:%M')
-                lines.append(f'• {h.name} | {reminder} | {period}')
+                lines.append(f'• {escaped_name} | {reminder} | {period}')
         if completed_habits:
-            lines.append('\n🔴 *Завершённые:*')
+            lines.append('\n<b>🔴 Завершённые:</b>')
             for h in completed_habits[:5]:
-                lines.append(f'• {h.name} (до {h.end_date})')
+                escaped_name = html.escape(h.name)
+                lines.append(f'• {escaped_name} (до {h.end_date})')
 
         if active_habits:
             kb = InlineKeyboardMarkup(inline_keyboard=[
-                [InlineKeyboardButton(text=f'❌ Завершить {h.name}', callback_data=f'complete_habit_{h.id}')]
+                [InlineKeyboardButton(text=f'❌ Завершить {html.escape(h.name)}', callback_data=f'complete_habit_{h.id}')]
                 for h in active_habits
             ])
         else:
@@ -72,7 +75,9 @@ async def cmd_my_habits(message: Message):
         return
 
     text, kb = await get_habits_display(message.from_user.id)
-    await message.answer(text, reply_markup=kb, parse_mode='Markdown')
+    logger.debug(f'Response text: {text}')
+    logger.debug(f'Keyboard: {kb}')
+    await message.answer(text, reply_markup=kb, parse_mode='HTML')
 
 
 @router.callback_query(F.data.startswith('complete_habit_'))
@@ -104,7 +109,7 @@ async def complete_habit_early(callback: CallbackQuery):
     text, kb = await get_habits_display(callback.from_user.id)
     try:
         if not isinstance(callback.message, InaccessibleMessage):
-            await callback.message.edit_text(text, reply_markup=kb, parse_mode='Markdown')
+            await callback.message.edit_text(text, reply_markup=kb, parse_mode='HTML')
             await callback.answer(HABIT_COMPLETED.format(habit.name))
     except Exception as e:
         # Если редактирование не удалось (старое сообщение, удалено и т.п.)

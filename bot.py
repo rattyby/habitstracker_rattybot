@@ -17,8 +17,9 @@ env.read_env()  # читает .env файл
 BOT_TOKEN = env.str('BOT_TOKEN')
 
 # Настройка логирования
+LOG_LEVEL = env.str('LOG_LEVEL', default='INFO').upper()
 logging.basicConfig(
-    level=logging.INFO,
+    level=getattr(logging, LOG_LEVEL, logging.INFO),
     format='{asctime} {levelname:<8} {message:<30} - {name}:{funcName} {filename}:{lineno}',
     style='{',
     stream=sys.stdout,  # явно указываем stdout
@@ -27,6 +28,8 @@ logger = logging.getLogger(__name__)
 
 # Уменьшаем количество логов от готовых библиотек.
 logging.getLogger('aiogram').setLevel(logging.WARNING)
+logging.getLogger('apscheduler').setLevel(logging.WARNING)
+logging.getLogger('sqlalchemy').setLevel(logging.WARNING)
 
 # Инициализация бота и диспетчера.
 bot = Bot(token=BOT_TOKEN)

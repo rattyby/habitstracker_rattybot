@@ -77,9 +77,9 @@ async def test_my_habits_with_habits(session):
     assert 'Бег' in response_text
 
     # Проверяем заголовки секций
-    assert '✅ *Активные:*' in response_text
-    assert '🔴 *Завершённые:*' in response_text
+    assert '<b>✅ Активные:</b>' in response_text
+    assert '<b>🔴 Завершённые:</b>' in response_text
 
     # Убедимся, что просроченная привычка попала в завершённые
     # (В списке завершённых отображается как "Бег (до ...)")
-    assert 'Бег' in response_text.split('🔴 *Завершённые:*')[1]
+    assert 'Бег' in response_text.split('<b>🔴 Завершённые:</b>')[1]
