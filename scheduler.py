@@ -8,6 +8,7 @@ from datetime import datetime, timedelta, date, timezone
 from sqlalchemy import select
 
 from db import get_async_session_maker
+from messages import PREMIUM_EXPIRED
 from models import Habit, HabitLog, User
 
 
@@ -151,11 +152,38 @@ async def schedule_daily_reminders():
                             send_reminder,
                             trigger='date',
                             run_date=utc_dt,
-                            args=[habit.id, log.id, user.timezone],
+                            args=[habit.id, log.id],
                             id=f'habit_{habit.id}_date_{current.isoformat()}'
                         )
-                        logger.info(f'Scheduled reminder for habit {habit.id} on {current} at {habit.reminder_time} ({user.timezone})')
+                        logger.info(f'Scheduled reminder for habit {habit.id} on {current} at {habit.reminder_time}')
                 current += timedelta(days=1)
+
+
+async def expire_premium():
+    """Проверяет пользователей, у которых истёк премиум, и уведомляет их."""
+    if _bot is None:
+        return
+
+    maker = get_async_session_maker()
+    async with maker() as session:
+        now = datetime.now(timezone.utc)
+        users_to_expire = await session.execute(
+            select(User).where(User.premium_until < now, User.premium_until != None)
+        )
+        users = users_to_expire.scalars().all()
+
+        for user in users:
+            # Убираем премиум-статус
+            user.is_premium = False
+            await session.commit()
+            try:
+                await _bot.send_message(
+                    user.telegram_id,
+                    PREMIUM_EXPIRED
+                )
+                logger.info(f'Premium expired for user {user.telegram_id}')
+            except Exception as e:
+                logger.error(f'Failed to notify premium expiry for user {user.telegram_id}: {e}')
 
 
 def init_scheduler():
@@ -165,6 +193,11 @@ def init_scheduler():
         schedule_daily_reminders,
         trigger=CronTrigger(hour=0, minute=0, timezone=pytz.UTC),
         id='daily_reminder_sync'
+    )
+    scheduler.add_job(
+        expire_premium,
+        trigger=CronTrigger(hour=0, minute=1, timezone=pytz.UTC),
+        id='expire_premium'
     )
     # Планируем задачи на сегодня (асинхронно, не блокируя запуск бота)
     import asyncio

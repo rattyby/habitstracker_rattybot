@@ -41,7 +41,7 @@ async def cmd_set_premium(message: Message):
 
     try:
         target_id = int(args[1])
-        days = int(args[2])
+        days = int(args[2]) + 1 # добавляем 1 день бонусом для избежания досрочного завершения
         if days <= 0:
             raise ValueError
     except ValueError:
