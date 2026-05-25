@@ -13,6 +13,7 @@ class User(Base):
     username: Mapped[str] = mapped_column(String(128), nullable=True)
     timezone: Mapped[str] = mapped_column(String(64), default='UTC')
     is_premium: Mapped[bool] = mapped_column(Boolean, default=False)
+    premium_until: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=True)
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
 
     habits: Mapped[list['Habit']] = relationship('Habit', back_populates='user', cascade='all, delete-orphan')

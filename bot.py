@@ -21,6 +21,7 @@ LOG_LEVEL = env.str('LOG_LEVEL', default='INFO').upper()
 logging.basicConfig(
     level=getattr(logging, LOG_LEVEL, logging.INFO),
     format='{asctime} {levelname:<8} {message:<30} - {name}:{funcName} {filename}:{lineno}',
+    datefmt='%Y-%m-%d %H:%M:%S',
     style='{',
     stream=sys.stdout,  # явно указываем stdout
 )
