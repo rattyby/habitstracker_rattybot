@@ -28,7 +28,8 @@ TIMEZONE_SET_SUCCESS = 'Часовой пояс установлен: {}'
 # Напоминания
 REMINDER_TEMPLATE = '🔔 Напоминание: привычка "{name}"\nВы сегодня уже выполнили?'
 COMPLETE_BUTTON_TEXT = '✅ Выполнено'
-COMPLETION_CONFIRMATION = '✅ Отлично! Привычка выполнена.'
+COMPLETION_CONFIRMATION = '✅ Отлично! Привычка {name} выполнена.'
+REMINDER_INACIVE = 'Это напоминание уже не активно.'
 
 # FSM
 ASK_NAME = 'Введите название привычки (например, "Утренняя зарядка"):'
@@ -45,8 +46,9 @@ HABIT_ADDED_SUCCESS = (
 )
 
 # Управление привычками
-HABIT_COMPLETED = 'Привычка "{name}" завершена досрочно. Напоминания прекращены.'
+HABIT_COMPLETED_EARLY = 'Привычка "{name}" завершена досрочно. Напоминания прекращены.'
 HABIT_ALREADY_COMPLETED = 'Эта привычка уже завершена.'
+HABIT_NOT_FOUND = 'Привычка не найдена.'
 
 # Премиум
 PREMIUM_ACTIVE = (
