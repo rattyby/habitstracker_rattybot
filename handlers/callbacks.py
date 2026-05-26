@@ -3,13 +3,15 @@ import logging
 from aiogram import Router, F
 from aiogram.types import CallbackQuery, InaccessibleMessage
 from datetime import datetime, timezone
+from sqlalchemy import select
+from sqlalchemy.orm import selectinload
 
 from db import get_async_session_maker
-from models import HabitLog
+from models import Habit, HabitLog
 
 
-router = Router()
 logger = logging.getLogger(__name__)
+router = Router()
 
 
 @router.callback_query(F.data.startswith('complete_'))
@@ -23,15 +25,28 @@ async def complete_habit(callback: CallbackQuery):
 
     maker = get_async_session_maker()
     async with maker() as session:
-        log = await session.get(HabitLog, log_id)
+        log = await session.get(HabitLog, log_id, options=[selectinload(HabitLog.habit)])
         if not log or log.status != 'pending':
             await callback.answer('Это напоминание уже неактивно.')
             return
+
+        # Дополнительно убедимся, что привычка существует
+        habit = log.habit
+        if not habit:
+            await callback.answer('Привычка не найдена.')
+            return
+
         log.status = 'completed'
         log.completed_at = datetime.now(timezone.utc)
         await session.commit()
-        if not isinstance(callback.message, InaccessibleMessage):
-            await callback.message.edit_text(f'✅ Отлично! Привычка "{log.habit.name}" выполнена.')
-        else:
-            await callback.answer(f'✅ Отлично! Привычка "{log.habit.name}" выполнена.')
+
+        text = f'✅ Отлично! Привычка "{habit.name}" выполнена.'
+        try:
+            if not isinstance(callback.message, InaccessibleMessage):
+                await callback.message.edit_text(text)
+            else:
+                await callback.answer(text)
+        except Exception as e:
+            logger.error(f'Failed to edit message: {e}')
+            await callback.answer(text)
     await callback.answer()
