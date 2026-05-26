@@ -79,7 +79,7 @@ async def send_reminder(habit_id: int, log_id: int):
         logger.debug(f'Sent reminder for habit {habit_id}')
 
         # Планируем повторное напоминание
-        if not (habit and log):
+        if not (habit and log and user):
             logger.warning(f'Failed to schedule second reminder for habit {habit_id}')
             return
         scheduler.add_job(
@@ -87,7 +87,7 @@ async def send_reminder(habit_id: int, log_id: int):
             trigger='date',
             run_date=datetime.now(timezone.utc) + timedelta(minutes=30),
             args=[habit.id, log.id],
-            id=f'second_habit_{habit.id}_date_{log.date.isoformat()}'
+            id=f'second_habit_{user.id}_{habit.id}_{log.date.isoformat()}'
         )
         logger.debug(f'Scheduled second reminder for habit {habit.id} in 30 minutes')
 
@@ -113,24 +113,32 @@ async def send_second_reminder(habit_id: int, log_id: int):
         await session.commit()
 
 
-async def schedule_daily_reminders():
-    """Загружает активные привычки и планирует задачи на сегодня и будущие дни"""
+async def schedule_reminders_for_user(user_id: int):
+    """Планирует напоминания для одного пользователя (только активные привычки, с учётом премиума)"""
     maker = get_async_session_maker()
     async with maker() as session:
+        user = await session.get(User, user_id)
+        if not user or not user.timezone:
+            return
+
         today = date.today()
-        habits = await session.execute(
+        # Берём все активные привычки
+        result = await session.execute(
             select(Habit).where(
+                Habit.user_id == user_id,
                 Habit.is_active == True,
                 Habit.end_date >= today
             )
         )
-        habits = habits.scalars().all()
+        habits = list(result.scalars().all())
+        # Сортируем (например, по id)
+        habits.sort(key=lambda h: h.id)
+        # Для не-премиум оставляем только первые 2
+        if not user.is_premium:
+            habits = habits[:2]
 
+        tz = pytz.timezone(user.timezone)
         for habit in habits:
-            user = await session.get(User, habit.user_id)
-            if not user or not user.timezone:
-                continue
-            tz = pytz.timezone(user.timezone)
             current = max(habit.start_date, today)
             while current <= habit.end_date:
                 log = await session.execute(
@@ -153,10 +161,30 @@ async def schedule_daily_reminders():
                             trigger='date',
                             run_date=utc_dt,
                             args=[habit.id, log.id],
-                            id=f'habit_{habit.id}_date_{current.isoformat()}'
+                            id=f'habit_{user.id}_{habit.id}_{current.isoformat()}'
                         )
                         logger.info(f'Scheduled reminder for habit {habit.id} on {current} at {habit.reminder_time}')
                 current += timedelta(days=1)
+
+
+async def reschedule_user_reminders(user_id: int):
+    """Удаляет все задачи пользователя и планирует заново"""
+    # Удаляем все задачи с префиксом habit_<user_id>_ и second_habit_<user_id>_
+    jobs_to_remove = [job.id for job in scheduler.get_jobs()
+                      if job.id.startswith(f'habit_{user_id}_') or job.id.startswith(f'second_habit_{user_id}_')]
+    for job_id in jobs_to_remove:
+        scheduler.remove_job(job_id)
+    await schedule_reminders_for_user(user_id)
+
+
+async def schedule_daily_reminders():
+    """Загружает всех пользователей и планирует для каждого"""
+    maker = get_async_session_maker()
+    async with maker() as session:
+        users = await session.execute(select(User))
+        users = users.scalars().all()
+        for user in users:
+            await schedule_reminders_for_user(user.id)
 
 
 async def expire_premium():
@@ -176,6 +204,7 @@ async def expire_premium():
             # Убираем премиум-статус
             user.is_premium = False
             await session.commit()
+            await reschedule_user_reminders(user.id)
             try:
                 await _bot.send_message(
                     user.telegram_id,

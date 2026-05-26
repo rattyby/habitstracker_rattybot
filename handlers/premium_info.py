@@ -29,7 +29,8 @@ async def cmd_premium(message: Message):
             return
 
         if user.is_premium:
-            days_left = (user.premium_until - datetime.now(timezone.utc)).days
+            now = datetime.now(timezone.utc)
+            days_left = (user.premium_until.date() - now.date()).days
             await message.answer(PREMIUM_ACTIVE.format(days_left=days_left, premium_until=user.premium_until.date()))
         else:
             await message.answer(PREMIUM_NOT_ACTIVE)

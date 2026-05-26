@@ -41,7 +41,7 @@ async def cmd_set_premium(message: Message):
 
     try:
         target_id = int(args[1])
-        days = int(args[2]) + 1 # добавляем 1 день бонусом для избежания досрочного завершения
+        days = int(args[2])
         if days <= 0:
             raise ValueError
     except ValueError:
@@ -56,7 +56,8 @@ async def cmd_set_premium(message: Message):
             await message.answer(f'Пользователь с ID {target_id} не найден.')
             return
 
-        new_expiry = datetime.now(timezone.utc) + timedelta(days=days)
+        expiry_date = (datetime.now(timezone.utc) + timedelta(days=days)).date()
+        new_expiry = datetime(expiry_date.year, expiry_date.month, expiry_date.day, 23, 59, 59, tzinfo=timezone.utc)
         user.premium_until = new_expiry
         user.is_premium = True
         await session.commit()
