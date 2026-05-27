@@ -2,7 +2,7 @@ import logging
 import os
 
 from aiogram import Router, F
-from aiogram.filters import Command
+from aiogram.filters import BaseFilter, Command
 from aiogram.types import Message
 from datetime import datetime, timedelta, timezone
 from sqlalchemy import select
@@ -23,14 +23,19 @@ def get_admin_ids() -> list[int]:
     return [int(x.strip()) for x in env_ids.split(',') if x.strip().isdigit()]
 
 
-def is_admin(user_id: int) -> bool:
-    return user_id in get_admin_ids()
+class AdminFilter(BaseFilter):
+    async def __call__(self, message: Message) -> bool:
+        if message.from_user is None:
+            return False
+        return message.from_user.id in get_admin_ids()
+
+router.message.filter(AdminFilter())
 
 
 @router.message(Command('set_premium'))
 async def cmd_set_premium(message: Message):
     """Устанавливает пользователю флаг is_premium = True"""
-    if message.from_user is None or not is_admin(message.from_user.id) or not message.text:
+    if message.from_user is None or not message.text:
         await message.answer('У вас нет прав для этой команды.')
         return
 
@@ -42,7 +47,7 @@ async def cmd_set_premium(message: Message):
     try:
         target_id = int(args[1])
         days = int(args[2])
-        if days <= 0:
+        if days < 0:
             raise ValueError
     except ValueError:
         await message.answer('ID и количество дней должны быть целыми положительными числами.')
@@ -56,10 +61,15 @@ async def cmd_set_premium(message: Message):
             await message.answer(f'Пользователь с ID {target_id} не найден.')
             return
 
-        expiry_date = (datetime.now(timezone.utc) + timedelta(days=days)).date()
+        if days > 0:
+            expiry_date = (datetime.now(timezone.utc) + timedelta(days=days)).date()
+            user.is_premium = True
+        else:
+            # Сброс премиума.
+            expiry_date = (datetime.now(timezone.utc) - timedelta(days=1)).date()
+            user.is_premium = False
         new_expiry = datetime(expiry_date.year, expiry_date.month, expiry_date.day, 23, 59, 59, tzinfo=timezone.utc)
         user.premium_until = new_expiry
-        user.is_premium = True
         await session.commit()
         await message.answer(f'Премиум для пользователя {target_id} продлён до {new_expiry.date()}.')
         logger.info(f'Admin {message.from_user.id} set premium for user {target_id} until {new_expiry.date()}')
@@ -68,7 +78,7 @@ async def cmd_set_premium(message: Message):
 @router.message(Command('set_loglevel'))
 async def cmd_set_loglevel(message: Message):
     """Динамически меняет уровень логирования (для отладки)"""
-    if message.from_user is None or not is_admin(message.from_user.id) or not message.text:
+    if message.from_user is None or not message.text:
         await message.answer('У вас нет прав для этой команды.')
         return
 

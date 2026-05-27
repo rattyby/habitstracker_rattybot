@@ -1,15 +1,15 @@
 import html
 import logging
 
-from aiogram import Router, F
+from aiogram import Router
 from aiogram.filters import Command
 from aiogram.types import Message, InlineKeyboardMarkup, InlineKeyboardButton
-from datetime import date
-from sqlalchemy import select
+from datetime import date, timedelta
+from sqlalchemy import Integer, cast, select, func
 
 from db import get_async_session_maker
-from messages import NO_HABITS_MESSAGE, USER_NOT_REGISTERED
-from models import User, Habit
+from messages import NO_HABITS_MESSAGE, STATS_HEADER, STATS_MONTH, STATS_WEEK, USER_NOT_REGISTERED
+from models import User, Habit, HabitLog
 
 
 logger = logging.getLogger(__name__)
@@ -78,3 +78,59 @@ async def cmd_my_habits(message: Message):
     logger.debug(f'Response text: {text}')
     logger.debug(f'Keyboard: {kb}')
     await message.answer(text, reply_markup=kb, parse_mode='HTML')
+
+
+@router.message(Command('stats'))
+async def cmd_stats(message: Message):
+    if message.from_user is None:
+        logger.warning(f'Message {message} has no from_user')
+        return
+
+    maker = get_async_session_maker()
+    async with maker() as session:
+        user = await session.execute(select(User).where(User.telegram_id == message.from_user.id))
+        user = user.scalar_one_or_none()
+        if not user:
+            await message.answer(USER_NOT_REGISTERED)
+            return
+
+        today = date.today()
+        week_ago = today - timedelta(days=7)
+        month_ago = today - timedelta(days=30)
+
+        # Статистика за неделю
+        week_result = await session.execute(
+            select(
+                func.count(HabitLog.id).label('total'),
+                func.sum((HabitLog.status == 'completed').cast(Integer)).label('completed')
+            ).where(
+                HabitLog.habit.has(user_id=user.id),
+                HabitLog.date >= week_ago
+            )
+        )
+        week = week_result.one()
+        week_total = week.total or 0
+        week_completed = week.completed or 0
+        week_percent = (week_completed / week_total * 100) if week_total else 0
+
+        # Статистика за месяц
+        month_result = await session.execute(
+            select(
+                func.count(HabitLog.id).label('total'),
+                func.sum((HabitLog.status == 'completed').cast(Integer)).label('completed')
+            ).where(
+                HabitLog.habit.has(user_id=user.id),
+                HabitLog.date >= month_ago
+            )
+        )
+        month = month_result.one()
+        month_total = month.total or 0
+        month_completed = month.completed or 0
+        month_percent = (month_completed / month_total * 100) if month_total else 0
+
+        text = (
+            STATS_HEADER
+            + STATS_WEEK.format(completed=week_completed, total=week_total, percent=week_percent)
+            + STATS_MONTH.format(completed=month_completed, total=month_total, percent=month_percent)
+        )
+        await message.answer(text, parse_mode='HTML')
