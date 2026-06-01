@@ -93,7 +93,7 @@ async def complete_habit(callback: CallbackQuery):
         log.completed_at = datetime.now(timezone.utc)
         await session.commit()
 
-        text = COMPLETION_CONFIRMATION.format(habit.name)
+        text = COMPLETION_CONFIRMATION.format(name=habit.name)
         logger.debug(f'Editing message {callback.message.message_id} for user {callback.from_user.id}')
         try:
             if not isinstance(callback.message, InaccessibleMessage):
