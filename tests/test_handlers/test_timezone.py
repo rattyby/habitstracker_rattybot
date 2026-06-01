@@ -5,7 +5,8 @@ from unittest.mock import AsyncMock, ANY
 
 from messages import TIMEZONE_PROMPT, TIMEZONE_SET_SUCCESS
 from models import User
-from handlers.timezone import cmd_set_timezone, process_timezone_callback
+from handlers.callbacks import process_timezone_callback
+from handlers.user_commands import cmd_set_timezone
 
 
 @pytest.mark.asyncio

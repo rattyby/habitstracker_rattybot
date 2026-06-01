@@ -9,14 +9,11 @@ def test_bot_import():
 
 
 def test_router_import():
-    from handlers.common import router
+    from handlers.user_commands import router
     assert router is not None
 
     from handlers.habits import router
     assert router is not None
 
     from handlers.add_habit import router
-    assert router is not None
-
-    from handlers.timezone import router
     assert router is not None
