@@ -9,6 +9,7 @@ from sqlalchemy import select
 
 from db import get_async_session_maker
 from models import User
+from scheduler import reschedule_user_reminders
 
 
 logger = logging.getLogger(__name__)
@@ -71,6 +72,7 @@ async def cmd_set_premium(message: Message):
         new_expiry = datetime(expiry_date.year, expiry_date.month, expiry_date.day, 23, 59, 59, tzinfo=timezone.utc)
         user.premium_until = new_expiry
         await session.commit()
+        await reschedule_user_reminders(user.id)
         await message.answer(f'Премиум для пользователя {target_id} продлён до {new_expiry.date()}.')
         logger.info(f'Admin {message.from_user.id} set premium for user {target_id} until {new_expiry.date()}')
 

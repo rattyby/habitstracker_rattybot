@@ -40,7 +40,7 @@ async def _send_reminder_message(habit, user, log, is_second=False):
         return False
 
     text = (
-        '🔔 Напоминаю ещё раз' if is_second else '🔔 Напоминание' +
+        ('🔔 Напоминаю ещё раз' if is_second else '🔔 Напоминание') +
         f': привычка "{habit.name}"\nВы сегодня уже выполнили?'
     )
 
@@ -195,8 +195,9 @@ async def expire_premium():
     maker = get_async_session_maker()
     async with maker() as session:
         now = datetime.now(timezone.utc)
+        old = now - timedelta(days=2)   # Ограничиваем оповещения о прекращении премиума
         users_to_expire = await session.execute(
-            select(User).where(User.premium_until < now, User.premium_until != None)
+            select(User).where(User.premium_until < now, User.premium_until > old, User.premium_until != None)
         )
         users = users_to_expire.scalars().all()
 

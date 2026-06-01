@@ -94,14 +94,17 @@ async def complete_habit(callback: CallbackQuery):
         await session.commit()
 
         text = COMPLETION_CONFIRMATION.format(habit.name)
+        logger.debug(f'Editing message {callback.message.message_id} for user {callback.from_user.id}')
         try:
             if not isinstance(callback.message, InaccessibleMessage):
                 await callback.message.edit_text(text)
+                logger.debug('Successfully edited message')
             else:
                 await callback.answer(text)
+                logger.debug('Unable edit, sent answer instead')
         except Exception as e:
-            logger.error(f'Failed to edit message: {e}')
-            await callback.answer(text)
+            logger.error(f'Failed to edit message: {e}, exc_info=True')
+            # await callback.answer(text)
     await callback.answer()
 
 
