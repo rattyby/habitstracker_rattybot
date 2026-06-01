@@ -1,14 +1,15 @@
 import logging
 
 from aiogram import Router, F
-from aiogram.types import CallbackQuery, InaccessibleMessage
+from aiogram.types import CallbackQuery, InaccessibleMessage, Message
 from datetime import datetime, timezone
+from sqlalchemy import select
 from sqlalchemy.orm import selectinload
 
 from db import get_async_session_maker
 from handlers.habits import get_habits_display
-from messages import COMPLETION_CONFIRMATION, HABIT_ALREADY_COMPLETED, HABIT_COMPLETED_EARLY, HABIT_NOT_FOUND, REMINDER_INACIVE
-from models import Habit, HabitLog
+from messages import COMPLETION_CONFIRMATION, HABIT_ALREADY_COMPLETED, HABIT_COMPLETED_EARLY, HABIT_NOT_FOUND, REMINDER_INACIVE, USER_NOT_REGISTERED
+from models import Habit, HabitLog, User
 from scheduler import reschedule_user_reminders
 
 
@@ -101,4 +102,32 @@ async def complete_habit(callback: CallbackQuery):
         except Exception as e:
             logger.error(f'Failed to edit message: {e}')
             await callback.answer(text)
+    await callback.answer()
+
+
+@router.callback_query(F.data.startswith('tz_'))
+async def process_timezone_callback(callback: CallbackQuery):
+    if callback.data is None or callback.from_user is None or callback.message is None:
+        logger.warning('Callback has no data of from_user')
+        return
+    tz = callback.data[3:]  # убираем 'tz_'
+    # Сохраняем в БД
+    maker = get_async_session_maker()
+    async with maker() as session:
+        result = await session.execute(
+            select(User).where(User.telegram_id == callback.from_user.id)
+        )
+        user = result.scalar_one_or_none()
+        if user:
+            user.timezone = tz
+            await session.commit()
+            if isinstance(callback.message, Message):
+                await callback.message.edit_text(f'Часовой пояс установлен: {tz}')
+            else:
+                logger.error('Callback message is not a Message for user {}'.format(callback.from_user.id))
+        else:
+            if isinstance(callback.message, Message):
+                await callback.message.edit_text(USER_NOT_REGISTERED)
+            else:
+                logger.error('Callback message is not a Message for user {}'.format(callback.from_user.id))
     await callback.answer()
