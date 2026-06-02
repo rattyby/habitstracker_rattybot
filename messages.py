@@ -28,7 +28,7 @@ TIMEZONE_SET_SUCCESS = 'Часовой пояс установлен: {}'
 # Напоминания
 REMINDER_TEMPLATE = '🔔 Напоминание: привычка "{name}"\nВы сегодня уже выполнили?'
 COMPLETE_BUTTON_TEXT = '✅ Выполнено'
-COMPLETION_CONFIRMATION = '✅ Отлично! Привычка {name} выполнена.'
+COMPLETION_CONFIRMATION = '✅ Отлично! Привычка "{name}" выполнена.'
 REMINDER_INACIVE = 'Это напоминание уже не активно.'
 
 # FSM

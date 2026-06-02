@@ -4,9 +4,9 @@ from aiogram.types import Message, User as TgUser
 from datetime import date, timedelta, time
 from unittest.mock import AsyncMock
 
-from messages import NO_HABITS_MESSAGE
-from models import User, Habit
-from handlers.habits import cmd_my_habits
+from messages import NO_HABITS_MESSAGE, STATS_HEADER, USER_NOT_REGISTERED
+from models import User, Habit, HabitLog
+from handlers.habits import cmd_my_habits, cmd_stats
 
 
 @pytest.mark.asyncio
@@ -83,3 +83,53 @@ async def test_my_habits_with_habits(session):
     # Убедимся, что просроченная привычка попала в завершённые
     # (В списке завершённых отображается как "Бег (до ...)")
     assert 'Бег' in response_text.split('<b>🔴 Завершённые:</b>')[1]
+
+
+@pytest.mark.asyncio
+async def test_stats_no_user(session):
+    message = AsyncMock(spec=Message)
+    message.from_user = TgUser(id=999, is_bot=False, first_name='Test')
+    message.answer = AsyncMock()
+    await cmd_stats(message)
+    message.answer.assert_called_with(USER_NOT_REGISTERED)
+
+
+@pytest.mark.asyncio
+async def test_stats_empty(session):
+    user = User(telegram_id=889)
+    session.add(user)
+    await session.commit()
+
+    message = AsyncMock(spec=Message)
+    message.from_user = TgUser(id=889, is_bot=False, first_name='Test')
+    message.answer = AsyncMock()
+    await cmd_stats(message)
+    args, kwargs = message.answer.call_args
+    text = args[0]
+    assert STATS_HEADER in text
+    assert '0 из 0' in text
+    assert '0.0%' in text
+
+
+@pytest.mark.asyncio
+async def test_stats_with_data(session):
+    user = User(telegram_id=778)
+    session.add(user)
+    await session.commit()
+    habit = Habit(user_id=user.id, name='Test', start_date=date.today() - timedelta(days=10), end_date=date.today() + timedelta(days=10), reminder_time=time(9,0), is_active=True)
+    session.add(habit)
+    await session.commit()
+    # Создаём логи: 5 completed, 5 pending за последние 7 дней
+    for i in range(7):
+        log = HabitLog(habit_id=habit.id, date=date.today() - timedelta(days=i), status='completed' if i < 5 else 'pending')
+        session.add(log)
+    await session.commit()
+
+    message = AsyncMock(spec=Message)
+    message.from_user = TgUser(id=778, is_bot=False, first_name='Test')
+    message.answer = AsyncMock()
+    await cmd_stats(message)
+    args, kwargs = message.answer.call_args
+    text = args[0]
+    assert 'Выполнено: 5 из 7' in text
+    assert '71.4%' in text
