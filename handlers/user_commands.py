@@ -9,23 +9,11 @@ from sqlalchemy import select
 from db import get_async_session_maker
 from messages import HELP_MESSAGE, PREMIUM_ACTIVE, PREMIUM_NOT_ACTIVE, START_MESSAGE, TIMEZONE_PROMPT, USER_NOT_REGISTERED
 from models import User
-from services.manage_user import get_or_create_user
+from services.manage_user import get_or_create_user, COMMON_TIMEZONES
 
 
 logger = logging.getLogger(__name__)
 router = Router()
-
-
-COMMON_TIMEZONES = [
-    'Europe/London',
-    'Europe/Minsk',
-    'Europe/Moscow',
-    'Europe/Kiev',
-    'Asia/Yekaterinburg',
-    'Asia/Novosibirsk',
-    'Asia/Vladivostok',
-    'UTC'
-]
 
 
 @router.message(Command('start'))
