@@ -8,7 +8,10 @@ from datetime import date, timedelta
 from sqlalchemy import Integer, cast, select, func
 
 from db import get_async_session_maker
-from messages import NO_HABITS_MESSAGE, STATS_HEADER, STATS_MONTH, STATS_WEEK, USER_NOT_REGISTERED
+from messages import (
+    NO_HABITS_MESSAGE, STATS_HEADER, STATS_HABIT_TITLE, STATS_HABIT_STATUS_ACTIVE, STATS_HABIT_STATUS_COMPLETED,
+    STATS_HABIT_WEEK, STATS_HABIT_MONTH, STATS_NO_LOGS, USER_NOT_REGISTERED
+)
 from models import User, Habit, HabitLog
 
 
@@ -94,43 +97,69 @@ async def cmd_stats(message: Message):
             await message.answer(USER_NOT_REGISTERED)
             return
 
+        # Получаем все привычки пользователя
+        habits = await session.execute(
+            select(Habit).where(Habit.user_id == user.id)
+            .order_by(Habit.is_active.desc(), Habit.id)
+        )
+        habits = habits.scalars().all()
+
+        if not habits:
+            await message.answer(NO_HABITS_MESSAGE)
+            return
+
         today = date.today()
         week_ago = today - timedelta(days=7)
         month_ago = today - timedelta(days=30)
 
-        # Статистика за неделю
-        week_result = await session.execute(
-            select(
-                func.count(HabitLog.id).label('total'),
-                func.sum((HabitLog.status == 'completed').cast(Integer)).label('completed')
-            ).where(
-                HabitLog.habit.has(user_id=user.id),
-                HabitLog.date >= week_ago
-            )
-        )
-        week = week_result.one()
-        week_total = week.total or 0
-        week_completed = week.completed or 0
-        week_percent = (week_completed / week_total * 100) if week_total else 0
+        lines = [STATS_HEADER]
+        has_data = False
 
-        # Статистика за месяц
-        month_result = await session.execute(
-            select(
-                func.count(HabitLog.id).label('total'),
-                func.sum((HabitLog.status == 'completed').cast(Integer)).label('completed')
-            ).where(
-                HabitLog.habit.has(user_id=user.id),
-                HabitLog.date >= month_ago
+        for habit in habits:
+            # Статистика за неделю
+            week_stats = await session.execute(
+                select(
+                    func.count(HabitLog.id).label('total'),
+                    func.sum((HabitLog.status == 'completed').cast(Integer)).label('completed')
+                ).where(
+                    HabitLog.habit_id == habit.id,
+                    HabitLog.date >= week_ago
+                )
             )
-        )
-        month = month_result.one()
-        month_total = month.total or 0
-        month_completed = month.completed or 0
-        month_percent = (month_completed / month_total * 100) if month_total else 0
+            week = week_stats.one()
+            week_total = week.total or 0
+            week_completed = week.completed or 0
+            week_percent = (week_completed / week_total * 100) if week_total else 0
 
-        text = (
-            STATS_HEADER
-            + STATS_WEEK.format(completed=week_completed, total=week_total, percent=week_percent)
-            + STATS_MONTH.format(completed=month_completed, total=month_total, percent=month_percent)
-        )
-        await message.answer(text, parse_mode='HTML')
+            # Статистика за месяц
+            month_stats = await session.execute(
+                select(
+                    func.count(HabitLog.id).label('total'),
+                    func.sum((HabitLog.status == 'completed').cast(Integer)).label('completed')
+                ).where(
+                    HabitLog.habit_id == habit.id,
+                    HabitLog.date >= month_ago
+                )
+            )
+            month = month_stats.one()
+            month_total = month.total or 0
+            month_completed = month.completed or 0
+            month_percent = (month_completed / month_total * 100) if month_total else 0
+
+            if week_total == 0 and month_total == 0:
+                continue
+
+            has_data = True
+            escaped_name = html.escape(habit.name)
+            status = STATS_HABIT_STATUS_COMPLETED if not habit.is_active else STATS_HABIT_STATUS_ACTIVE
+            lines.append(STATS_HABIT_TITLE.format(name=escaped_name, status=status))
+            if week_total > 0:
+                lines.append(STATS_HABIT_WEEK.format(completed=week_completed, total=week_total, percent=week_percent))
+            if month_total > 0:
+                lines.append(STATS_HABIT_MONTH.format(completed=month_completed, total=month_total, percent=month_percent))
+            lines.append('')
+
+        if not has_data:
+            await message.answer(STATS_NO_LOGS)
+        else:
+            await message.answer('\n'.join(lines), parse_mode='HTML')

@@ -84,5 +84,9 @@ PREMIUM_EXPIRED = (
 
 # Статистика
 STATS_HEADER = '📊 <b>Ваша статистика</b>\n\n'
-STATS_WEEK = '<b>За последние 7 дней:</b>\n✅ Выполнено: {completed} из {total} ({percent:.1f}%)\n\n'
-STATS_MONTH = '<b>За последние 30 дней:</b>\n✅ Выполнено: {completed} из {total} ({percent:.1f}%)'
+STATS_HABIT_TITLE = '<b>{name}</b>{status}'
+STATS_HABIT_STATUS_ACTIVE = ''
+STATS_HABIT_STATUS_COMPLETED = ' (завершена)'
+STATS_HABIT_WEEK = '  • За 7 дней: {completed}/{total} ({percent:.1f}%)'
+STATS_HABIT_MONTH = '  • За 30 дней: {completed}/{total} ({percent:.1f}%)'
+STATS_NO_LOGS = 'Нет данных за выбранные периоды.'
