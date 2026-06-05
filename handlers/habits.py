@@ -123,7 +123,8 @@ async def cmd_stats(message: Message):
                     func.sum((HabitLog.status == 'completed').cast(Integer)).label('completed')
                 ).where(
                     HabitLog.habit_id == habit.id,
-                    HabitLog.date >= week_ago
+                    HabitLog.date >= week_ago,
+                    HabitLog.date <= today
                 )
             )
             week = week_stats.one()
@@ -138,7 +139,8 @@ async def cmd_stats(message: Message):
                     func.sum((HabitLog.status == 'completed').cast(Integer)).label('completed')
                 ).where(
                     HabitLog.habit_id == habit.id,
-                    HabitLog.date >= month_ago
+                    HabitLog.date >= month_ago,
+                    HabitLog.date <= today
                 )
             )
             month = month_stats.one()
